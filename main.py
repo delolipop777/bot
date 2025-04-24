@@ -4,32 +4,13 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 )
-from fastapi import FastAPI, Request
-from telegram import Bot
-from telegram.ext import Dispatcher
 
 # Registration steps
 NAME, PHONE, VISIT_TIME, GUEST_COUNT = range(4)
 
-# Admin ID
+# Admin ID (keep it as is)
 ADMIN_ID = 386753959
 
-# Initialize FastAPI app
-app = FastAPI()
-
-# Initialize Telegram Bot
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = Bot(token=BOT_TOKEN)
-
-# Telegram bot webhook endpoint
-@app.post("/webhook")
-async def handle_webhook(request: Request):
-    update = Update.de_json(await request.json(), bot)
-    dispatcher = Dispatcher(bot, None, workers=0)
-    dispatcher.process_update(update)
-    return {"status": "ok"}
-
-# Bot logic
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
         "Assalomu alaykum! 👋\n"
@@ -109,10 +90,19 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 if __name__ == "__main__":
-    # Set webhook URL
-    webhook_url = "https://bot.railway.app/webhook"
-    bot.set_webhook(url=webhook_url)
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Run FastAPI with Uvicorn
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
+            VISIT_TIME: [CallbackQueryHandler(visit_time_selection)],
+            GUEST_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_guest_count)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+
+    app.add_handler(conv_handler)
+    app.run_polling()
