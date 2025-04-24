@@ -1,11 +1,15 @@
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+)
 
 # Registration steps
 NAME, PHONE, VISIT_TIME, GUEST_COUNT = range(4)
 
-# Replace this with your Telegram user ID (get it from @userinfobot)
-ADMIN_ID = 386753959  # admin chat ID
+# Admin ID (keep it as is)
+ADMIN_ID = 386753959
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
@@ -30,7 +34,6 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["phone"] = update.message.text
 
-    # Create inline keyboard for visit time selection
     keyboard = [
         [InlineKeyboardButton("14:00", callback_data="14:00")],
         [InlineKeyboardButton("15:00", callback_data="15:00")],
@@ -43,11 +46,10 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def visit_time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    visit_time = query.data  # This gets the selected time (14:00, 15:00, 16:00)
+    visit_time = query.data
     context.user_data["visit_time"] = visit_time
 
-    # Acknowledge the button press and ask for guest count
-    await query.answer()  # This is required to dismiss the loading animation
+    await query.answer()
     await query.edit_message_text(f"Tashrif vaqti: {visit_time}.\nEndi, tashrif buyuruvchilar sonini kiriting:")
     return GUEST_COUNT
 
@@ -61,14 +63,11 @@ async def get_guest_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = context.user_data["name"]
     phone = context.user_data["phone"]
     visit_time = context.user_data["visit_time"]
-    guest_count = context.user_data["guest_count"]
 
-    # Get user's first and last name, and username
     first_name = update.message.from_user.first_name
     last_name = update.message.from_user.last_name or "N/A"
     username = update.message.from_user.username or "N/A"
 
-    # Send information to admin
     message = (
         f"📥 Yangi tashrif buyuruvchidan ma'lumot:\n"
         f"👤 Ism-familiya: {name}\n"
@@ -90,20 +89,20 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Tashrif ro'yxatdan o'tkazish bekor qilindi.")
     return ConversationHandler.END
 
+if __name__ == "__main__":
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Create the Application and add handlers
-app = ApplicationBuilder().token("7595367210:AAGSxmPqvCh06tnECpUnnDxsame1gYRlOkM").build()
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
+            VISIT_TIME: [CallbackQueryHandler(visit_time_selection)],
+            GUEST_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_guest_count)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
 
-conv_handler = ConversationHandler(
-    entry_points=[CommandHandler("start", start)],
-    states={
-        NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-        PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
-        VISIT_TIME: [CallbackQueryHandler(visit_time_selection)],  # Use CallbackQueryHandler here
-        GUEST_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_guest_count)],
-    },
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
-
-app.add_handler(conv_handler)
-app.run_polling()
+    app.add_handler(conv_handler)
+    app.run_polling()
