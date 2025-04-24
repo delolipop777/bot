@@ -9,7 +9,7 @@ from telegram.ext import (
 NAME, PHONE, VISIT_TIME, GUEST_COUNT = range(4)
 
 # Admin ID (keep it as is)
-ADMIN_ID = 5837570018
+ADMIN_ID = 386753959
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
