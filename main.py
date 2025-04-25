@@ -9,7 +9,7 @@ from telegram.ext import (
 NAME, PHONE, VISIT_TIME, GUEST_COUNT = range(4)
 
 # Admin ID
-ADMIN_ID = 386753959
+ADMIN_IDS = [386753959, 5837570018]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Clear any previous data to restart cleanly
@@ -85,7 +85,9 @@ async def get_guest_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"User ID: {user.id}"
     )
 
-    await context.bot.send_message(chat_id=ADMIN_ID, text=message)
+    for id in ADMIN_IDS:
+        await context.bot.send_message(chat_id=id, text=message)
+        
     await update.message.reply_text("Tashrif ma'lumotlaringiz muvaffaqiyatli yuborildi! 👌")
     return ConversationHandler.END
 
