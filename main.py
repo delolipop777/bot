@@ -8,10 +8,13 @@ from telegram.ext import (
 # Registration steps
 NAME, PHONE, VISIT_TIME, GUEST_COUNT = range(4)
 
-# Admin ID (keep it as is)
+# Admin ID
 ADMIN_ID = 386753959
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Clear any previous data to restart cleanly
+    context.user_data.clear()
+
     welcome_message = (
         "Assalomu alaykum! 👋\n"
         "Sizni tashrif vaqti va ma'lumotlaringizni qayd etish uchun botimizga xush kelibsiz. 😊\n\n"
@@ -64,9 +67,10 @@ async def get_guest_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = context.user_data["phone"]
     visit_time = context.user_data["visit_time"]
 
-    first_name = update.message.from_user.first_name
-    last_name = update.message.from_user.last_name or "N/A"
-    username = update.message.from_user.username or "N/A"
+    user = update.message.from_user
+    first_name = user.first_name
+    last_name = user.last_name or "N/A"
+    username = user.username or "N/A"
 
     message = (
         f"📥 Yangi tashrif buyuruvchidan ma'lumot:\n"
@@ -78,7 +82,7 @@ async def get_guest_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"First Name: {first_name}\n"
         f"Last Name: {last_name}\n"
         f"Username: @{username}\n"
-        f"User ID: {update.message.from_user.id}"
+        f"User ID: {user.id}"
     )
 
     await context.bot.send_message(chat_id=ADMIN_ID, text=message)
@@ -86,6 +90,7 @@ async def get_guest_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
     await update.message.reply_text("Tashrif ro'yxatdan o'tkazish bekor qilindi.")
     return ConversationHandler.END
 
@@ -102,6 +107,7 @@ if __name__ == "__main__":
             GUEST_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_guest_count)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True  # allows restarting the same conversation again
     )
 
     app.add_handler(conv_handler)
